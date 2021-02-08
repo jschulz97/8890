@@ -4,6 +4,10 @@ import copy
 
 import kmeans
 
+import matplotlib.pyplot as plt
+import pandas
+from collections import Counter
+
 ##############################################
 # RBF Network 
 # One hidden layer
@@ -51,7 +55,7 @@ class RBN:
                     if(c1[i] - c2[i] > dmax[i]):
                         dmax[i] = c1[i] - c2[i]
         
-        sigma = dmax / np.power( 2 * len(centers), .5 )
+        sigma = 1 * dmax / np.power( 2 * len(centers), .5 )
 
         return sigma
 
@@ -64,9 +68,7 @@ class RBN:
         # for all J
         for i in range(len(self.centers)):
             self.iota[i] = self.rbf(x, self.centers[i], self.sigma)
-        # for all O
-        self.iota = self.rbf(x, self.centers, self.sigma)
-        out = np.dot( np.expand_dims(self.iota, axis=0), self.hl_weights )
+        out = np.dot( self.iota.T, self.hl_weights )
 
         return out
 
@@ -78,58 +80,108 @@ class RBN:
     ##############################################
     def backward(self, output, y, alpha=.01):
         error = y - output
-        big_e = np.sum( [ np.power(e, 2) for e in error ] ) / 2.0
+        # big_e = np.sum( [ np.power(e, 2) for e in error ] ) / 2.00
+        dE_w = -1 * np.dot(self.iota, error)
+        # dE_w = -1 * error
+        self.hl_weights = self.hl_weights + (-1 * alpha * dE_w)
+
+        return error
         
-        
-
-
-
-
+    def plot_stuff(self, *args):
+        fig, ax = plt.subplots()
+        for arr in args:
+            ax.scatter(arr[:,0], arr[:,1])
+        plt.show()
 
 
     ##############################################
     # Train: k-means then forward/backward
     ##############################################
     def train(self, data, labels, alpha=.01, epochs=100, batch_size=50, error_target=.01):
-        # hidden layer
+        # hidden layer output
         self.iota = np.zeros((self.k, self.o))
 
         # weights with random numbers
-        self.hl_weights  = np.random.normal(0, 1, size=(self.k, self.o))
-
-        # init errors
-        error = np.array((self.k, self.o))
+        self.hl_weights  = np.random.uniform(-max(labels), max(labels), size=(self.k, self.o))
 
         # Init centers and covariances
+        # Kmeans to find centers
         km = kmeans.KMeans(self.k)
         self.centers = km(data, error_target=.001)
         self.sigma = self.estimate_sigma(self.centers)
 
         # Expand labels
-        soft_labels = self.make_soft_labels(labels)
+        # soft_labels = self.make_soft_labels(labels)
+
+        best_weights = None
+        best_error   = np.inf
+
+        self.plot_stuff(data, self.centers)
 
         ## Epochs
+        epochs_error = []
         for k in tqdm(range(epochs)):
+            labels_ep = []
+            outs_ep   = []
             old_h1 = copy.deepcopy(self.hl_weights)
+            batch_error = []
             for b in range(batch_size):
                 ind = np.random.randint(0, len(data))
                 x = data[ind]
-                y = soft_labels[ind]
+                y = labels[ind]
                 
                 # forward pass
                 output = self.forward(x)
 
+                labels_ep.append(y)
+                outs_ep.append(output[0][0])
+
                 # backward
-                self.backward(output, y, alpha=alpha)
+                error = self.backward(output, y, alpha=alpha)
+                batch_error.append( error )
 
+            batch_avg_error = np.sum(batch_error) / batch_size
 
-            
-            
+            # faux momentum?
+            if(abs(batch_avg_error) < alpha*.5):
+                alpha = alpha / 3.0
+                print('new alpha:', alpha)
+
+            if(abs(batch_avg_error) < best_error):
+                best_error   = abs(batch_avg_error)
+                best_weights = self.hl_weights
+
+            epochs_error.append(batch_avg_error)
             # Break if below error target
             if(np.linalg.norm(self.hl_weights - old_h1) < error_target):
                 break
+
+        self.hl_weights = best_weights
+
+        # dist of outputs/labels
+        # fixed bin size
+        print('Hist of iota')
+        bins = np.arange(-3, 3, .01) # fixed bin size
+        plt.xlim([min(self.iota)-1, max(self.iota)+1])
+        plt.hist(self.iota, bins=bins, alpha=0.5)
+        plt.show()
+
+        # print('Hist of outputs')
+        # bins = np.arange(-5, 5, .1) # fixed bin size
+        # plt.xlim([min(outs_ep)-1, max(outs_ep)+1])
+        # plt.hist(outs_ep, bins=bins, alpha=0.5)
+        # plt.show()
+
+        # # fixed bin size
+        # print('Hist of weights')
+        # bins = np.arange(-15, 15, .1) # fixed bin size
+        # plt.xlim([min(self.hl_weights)-1, max(self.hl_weights)+1])
+        # plt.hist(self.hl_weights, bins=bins, alpha=0.5)
+        # plt.show()
         
-        print('Completed Training:',k,'epochs')
+        print('Completed Training:',k+1,'epochs')
+        print('Best Error:',best_error)
+        return epochs_error, self.centers
 
 
 
