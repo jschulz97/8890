@@ -1,6 +1,8 @@
 import numpy as np
 from tqdm import tqdm
 import copy
+import pickle
+import time
 
 import kmeans
 
@@ -13,13 +15,22 @@ from collections import Counter
 # One hidden layer
 ##############################################
 class RBN:
-    def __init__(self, k, outputs):
+    def __init__(self, k, outputs, config=None):
         # X  (1, 2)
         # H1 (2, 3)
         # W  (3, 3)
         # O  (3, 1)
         self.k = k
         self.o = outputs
+        self.iota = np.zeros((self.k, self.o))
+
+        if(config):
+            with open(config, 'rb') as file:
+                contents = pickle.load(file)
+                self.centers = contents[0]
+                self.hl_weights = contents[1]
+                self.sigma = contents[2]
+                print('Config Loaded!')
 
 
     ##############################################
@@ -98,7 +109,7 @@ class RBN:
     ##############################################
     # Train: k-means then forward/backward
     ##############################################
-    def train(self, data, labels, alpha=.01, epochs=100, batch_size=50, dw_target=.01):
+    def train(self, data, labels, alpha=.01, epochs=100, batch_size=50, dw_target=.01, save_config=False):
         # hidden layer output
         self.iota = np.zeros((self.k, self.o))
 
@@ -164,6 +175,9 @@ class RBN:
 
         self.hl_weights = best_weights
 
+        if(save_config):
+            self.save_config()
+
         # # dist of outputs/labels
         # # fixed bin size
         # print('Hist of iota')
@@ -204,6 +218,12 @@ class RBN:
         soft_labels = np.array(soft_labels)
 
         return soft_labels
+
+    
+    # Save out
+    def save_config(self,):
+        with open('models/config_'+str(time.time())+'.pkl', 'wb') as file:
+            pickle.dump((self.centers, self.hl_weights, self.sigma), file)
 
 
     # #############################
