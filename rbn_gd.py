@@ -29,7 +29,7 @@ class RBN:
                 contents = pickle.load(file)
                 self.centers = contents[0]
                 self.hl_weights = contents[1]
-                self.covariances = contents[2]
+                self.sigma = contents[2]
                 print('Config Loaded!')
 
 
@@ -67,18 +67,24 @@ class RBN:
     ##############################################
     # Radial-Basis Function
     ##############################################
-    def rbf(self, x, mu, cov):
-        # output = np.exp(-1 * .5 * (1/np.power(sigma, 2)) * np.linalg.norm(x-mu))
+    def rbf(self, x, mu, sigma):
+        output = np.exp(-1 * .5 * (1/np.power(sigma, 2)) * np.linalg.norm(x-mu))
         # cov = [[sigma[0], 0], [0, sigma[1]]]
         # output = ( np.exp( -.5 * np.dot(np.dot(( x - mu ).T, np.linalg.inv(cov)) , ( x - mu )) ) / 
         #             ( np.power( np.power(2*np.pi, len(x)) * np.linalg.det(cov) , .5) ) )
-        output = ( np.exp( -.5 * np.dot(np.dot(( x - mu ).T, np.linalg.inv(cov)) , ( x - mu )) ) )
+        # output = ( np.exp( -.5 * np.dot(np.dot(( x - mu ).T, np.linalg.inv(cov)) , ( x - mu )) ) )
         
         return output
 
     
-    def rbf_prime(self, x, mu, cov):
-        out = np.linalg.inv(cov) * (x - mu) * np.exp( -.5 * (x - mu).T * np.linalg.inv(cov) * (x - mu) )
+    def rbf_prime_mu(self, x, mu, sigma):
+        # out = np.linalg.inv(cov) * (x - mu) * np.exp( -.5 * (x - mu).T * np.linalg.inv(cov) * (x - mu) )
+        out = (1/np.power(sigma,2)) * np.linalg.norm(x - mu) * np.exp( -(1/(2*np.power(sigma,2))) * np.power(np.linalg.norm(x - mu), 2) )
+        return out
+
+    
+    def rbf_prime_sigma(self, x, mu, sigma):
+        out = (np.power(np.linalg.norm(x-mu), 2) / np.power(sigma,3)) * np.exp( -(1/(2*np.power(sigma,2))) * np.power(np.linalg.norm(x - mu), 2) )
         return out
 
 
@@ -106,7 +112,7 @@ class RBN:
     def forward(self, x):
         # for all J
         for i in range(len(self.centers)):
-            self.iota[i] = self.rbf(x, self.centers[i], self.center_covs[i])
+            self.iota[i] = self.rbf(x, self.centers[i], self.sigma[i])
         out = np.dot( self.iota.T, self.hl_weights )
 
         return out
@@ -124,9 +130,11 @@ class RBN:
 
         # update centers
         for i,mu in enumerate(self.centers):
-            self.centers[i] = mu - (alpha * error * -1 * self.rbf_prime(x, mu, self.center_covs[i]))
+            self.centers[i] = mu - (alpha * error * -1 * self.rbf_prime_mu(x, mu, self.sigma[i]))
 
-        # update covariances
+        # update sigmas
+        for i,s in enumerate(self.sigma):
+            self.sigma[i] = s - (alpha * error * -1 * self.rbf_prime_sigma(x, mu, self.sigma[i]))
         
 
         return error
@@ -153,19 +161,21 @@ class RBN:
         # Kmeans to find centers
         km = kmeans.KMeans(self.k)
         self.centers = km(data, error_target=.001)
-        
-        # self.sigma = self.estimate_sigma(self.centers)
 
-        # Estimate Covariances
-        uniqs = list(set(sorted(labels)))
-        self.covariances = {}
-        for lab in uniqs:
-            data_class = np.array([d for d,l in zip(data,labels) if l==lab])
-            self.covariances[lab] = self.estimate_cov(np.transpose(data_class,[1,0]))
+        # # Estimate Covariances
+        # uniqs = list(set(sorted(labels)))
+        # self.covariances = {}
+        # for lab in uniqs:
+        #     data_class = np.array([d for d,l in zip(data,labels) if l==lab])
+        #     self.covariances[lab] = self.estimate_cov(np.transpose(data_class,[1,0]))
 
-        self.center_covs = []
-        for lab in labels:
-            self.center_covs.append(self.covariances[lab])
+        # self.center_covs = []
+        # for lab in labels:
+        #     self.center_covs.append(self.covariances[lab])
+
+        # Estimate sigma
+        sigma = self.estimate_sigma(self.centers)
+        self.sigma = np.repeat(sigma, self.k)
 
         # Expand labels
         # soft_labels = self.make_soft_labels(labels)
@@ -187,7 +197,7 @@ class RBN:
                 ind = np.random.randint(0, len(data))
                 x   = data[ind]
                 y   = labels[ind]
-                cov = self.center_covs[ind]
+                # cov = self.center_covs[ind]
                 
                 # forward pass
                 output = self.forward(x)
@@ -196,7 +206,7 @@ class RBN:
                 outs_ep.append(output[0][0])
 
                 # backward
-                error = self.backward(x, output, y, cov, alpha=alpha)
+                error = self.backward(x, output, y, alpha=alpha)
                 batch_error.append( error )
 
             batch_avg_error = np.sum(batch_error) / batch_size
@@ -260,7 +270,7 @@ class RBN:
     # Save out
     def save_config(self,):
         with open('models/config_'+str(time.time())+'.pkl', 'wb') as file:
-            pickle.dump((self.centers, self.hl_weights, self.covariances), file)
+            pickle.dump((self.centers, self.hl_weights, self.sigma), file)
 
 
 

@@ -36,12 +36,12 @@ class RBN:
     ##############################################
     # Radial-Basis Function
     ##############################################
-    def rbf(self, x, mu, sigma):
-        output = np.exp(-1 * .5 * (1/np.power(sigma, 2)) * np.linalg.norm(x-mu))
+    def rbf(self, x, mu, cov):
+        # return np.exp(-1 * .5 * (1/np.power(sigma, 2)) * np.linalg.norm(x-mu))
         # cov = [[sigma[0], 0], [0, sigma[1]]]
         # output = ( np.exp( -.5 * np.dot(np.dot(( x - mu ).T, np.linalg.inv(cov)) , ( x - mu )) ) / 
         #             ( np.power( np.power(2*np.pi, len(x)) * np.linalg.det(cov) , .5) ) )
-        # output = ( np.exp( -.5 * np.dot(np.dot(( x - mu ).T, np.linalg.inv(cov)) , ( x - mu )) ) )
+        output = ( np.exp( -.5 * np.dot(np.dot(( x - mu ).T, np.linalg.inv(cov)) , ( x - mu )) ) )
         
         return output
 
@@ -78,30 +78,12 @@ class RBN:
 
 
     ##############################################
-    # Estimate class spread, sigma
-    ##############################################
-    def estimate_sigma(self, centers):
-        # find dmax
-        dims = 1 if len(centers.shape) == 1 else centers.shape[1]
-        dmax = 0
-
-        for c1 in centers:
-            for c2 in centers:
-                if(np.linalg.norm(c1 - c2) > dmax):
-                    dmax = np.linalg.norm(c1 - c2)
-        
-        sigma = 1 * dmax / np.power( 2 * len(centers), .5 )
-
-        return sigma
-
-
-    ##############################################
     # Forward Pass
     ##############################################
     def forward(self, x):
         # for all J
         for i in range(len(self.centers)):
-            self.iota[i] = self.rbf(x, self.centers[i], self.sigma[i])
+            self.iota[i] = self.rbf(x, self.centers[i], self.center_covs[i])
         out = np.dot( self.iota.T, self.hl_weights )
 
         return out
@@ -143,24 +125,20 @@ class RBN:
         km = kmeans.KMeans(self.k)
         self.centers = km(data, error_target=.001)
         
-        # # Estimate Covariances
-        # uniqs = list(set(sorted(labels)))
-        # self.covariances = {}
-        # for lab in uniqs:
-        #     data_class = np.array([d for d,l in zip(data,labels) if l==lab])
-        #     self.covariances[lab] = self.estimate_cov(np.transpose(data_class,[1,0]))
-        # self.center_covs = []
-        # for lab in labels:
-        #     self.center_covs.append(self.covariances[lab])
-
-        # Estimate sigma
-        sigma = self.estimate_sigma(self.centers)
-        self.sigma = np.repeat(sigma, self.k)
+        # Estimate Covariances
+        uniqs = list(set(sorted(labels)))
+        self.covariances = {}
+        for lab in uniqs:
+            data_class = np.array([d for d,l in zip(data,labels) if l==lab])
+            self.covariances[lab] = self.estimate_cov(np.transpose(data_class,[1,0]))
+        self.center_covs = []
+        for lab in labels:
+            self.center_covs.append(self.covariances[lab])
 
         best_weights = None
         best_error   = np.inf
 
-        # self.plot_stuff(data, self.centers)
+        self.plot_stuff(data, self.centers)
 
         ## Epochs
         last_20 = []
