@@ -104,7 +104,7 @@ class RBN:
             self.iota[i] = self.rbf(x, self.centers[i], self.sigma[i])
         out = np.dot( self.iota.T, self.hl_weights )
 
-        return out
+        return out[0][0]
 
 
 
@@ -115,6 +115,7 @@ class RBN:
 
         # weights
         error = y - output
+        np.expand_dims([error], axis=1)
         dE_w = -1 * np.dot(self.iota, error)
         self.hl_weights = self.hl_weights + (-1 * alpha * dE_w)
 
@@ -179,7 +180,7 @@ class RBN:
                 output = self.forward(x)
 
                 labels_ep.append(y)
-                outs_ep.append(output[0][0])
+                outs_ep.append(output)
 
                 # backward
                 error = self.backward(output, y, alpha=alpha)

@@ -93,12 +93,11 @@ class RBN:
     ##############################################
     def estimate_sigma(self, centers):
         # find dmax
-        dmax = np.zeros((len(centers[0])))
-        for i in range(len(centers[0])):
-            for c1 in centers:
-                for c2 in centers:
-                    if(c1[i] - c2[i] > dmax[i]):
-                        dmax[i] = c1[i] - c2[i]
+        dmax = 0
+        for c1 in centers:
+            for c2 in centers:
+                if(np.linalg.norm(c1 - c2) > dmax):
+                    dmax = np.linalg.norm(c1 - c2)
         
         sigma = 1 * dmax / np.power( 2 * len(centers), .5 )
 
@@ -115,7 +114,7 @@ class RBN:
             self.iota[i] = self.rbf(x, self.centers[i], self.sigma[i])
         out = np.dot( self.iota.T, self.hl_weights )
 
-        return out
+        return out[0][0]
 
 
 
@@ -125,6 +124,7 @@ class RBN:
     def backward(self, x, output, y, alpha=.01):
         # update weights
         error = y - output
+        error = np.expand_dims([error], axis=1)
         dE_w = -1 * np.dot(self.iota, error)
         self.hl_weights = self.hl_weights + (-1 * alpha * dE_w)
 
@@ -183,7 +183,7 @@ class RBN:
         best_weights = None
         best_error   = np.inf
 
-        self.plot_stuff(data, self.centers)
+        # self.plot_stuff(data, self.centers)
 
         ## Epochs
         last_20 = []
@@ -203,7 +203,7 @@ class RBN:
                 output = self.forward(x)
 
                 labels_ep.append(y)
-                outs_ep.append(output[0][0])
+                outs_ep.append(output)
 
                 # backward
                 error = self.backward(x, output, y, alpha=alpha)
