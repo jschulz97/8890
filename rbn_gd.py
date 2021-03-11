@@ -177,9 +177,6 @@ class RBN:
         sigma = self.estimate_sigma(self.centers)
         self.sigma = np.repeat(sigma, self.k)
 
-        # Expand labels
-        # soft_labels = self.make_soft_labels(labels)
-
         best_weights = None
         best_error   = np.inf
 
@@ -225,46 +222,9 @@ class RBN:
         if(save_config):
             self.save_config()
 
-        # # dist of outputs/labels
-        # # fixed bin size
-        # print('Hist of iota')
-        # new_iota = [i for i in self.iota if i > 1e-5] # take out zeros
-        # print(len(new_iota))
-        # bins = np.arange(-3, 3, .01) # fixed bin size
-        # plt.xlim([min(new_iota)-1, max(new_iota)+1])
-        # plt.hist(new_iota, bins=bins, alpha=0.5)
-        # plt.show()
-
-        # print('Hist of outputs')
-        # bins = np.arange(-5, 5, .1) # fixed bin size
-        # plt.xlim([min(outs_ep)-1, max(outs_ep)+1])
-        # plt.hist(outs_ep, bins=bins, alpha=0.5)
-        # plt.show()
-
-        # # fixed bin size
-        # print('Hist of weights')
-        # bins = np.arange(-15, 15, .1) # fixed bin size
-        # plt.xlim([min(self.hl_weights)-1, max(self.hl_weights)+1])
-        # plt.hist(self.hl_weights, bins=bins, alpha=0.5)
-        # plt.show()
-        
         print('Completed Training:',k+1,'epochs')
         print('Best Error:',best_error)
         return epochs_error, self.centers
-
-
-
-    def make_soft_labels(self, labels):
-        soft_labels = []
-        uniqs = list(set(sorted(labels)))
-
-        for lab in labels:
-            new_label = [0] * len(uniqs)
-            new_label[lab] = 1
-            soft_labels.append(np.array(new_label))
-        soft_labels = np.array(soft_labels)
-
-        return soft_labels
 
     
     # Save out
@@ -272,49 +232,3 @@ class RBN:
         with open('models/config_'+str(time.time())+'.pkl', 'wb') as file:
             pickle.dump((self.centers, self.hl_weights, self.sigma), file)
 
-
-
-    # #############################
-    # # Show confusion matrix
-    # def show_cm(self, show=True):
-    #     if(self.did_i_test):
-    #         cm = np.zeros((10,10))
-
-    #         good = 0
-    #         for i in range(self.test_dim):
-    #             ind = int(self.pred_ind[i])
-    #             tpi = np.argmax(self.test_labels[ind])
-    #             cm[tpi] += self.pred_res[i]
-
-    #             #score
-    #             if(tpi == np.argmax(self.pred_res[i])):
-    #                 good += 1
-
-    #         mx = np.max(cm)
-
-    #         fig = plt.figure(figsize=(9,9))
-    #         fig.suptitle('')
-
-    #         ax = fig.add_subplot()
-    #         im = ax.imshow(cm,vmax=mx,vmin=0)
-
-    #         for j in range(10):
-    #             for k in range(10):
-    #                 text = ax.text(k,j,cm[j,k],ha="center", va="center", color="w",fontsize=10)
-
-    #         plt.colorbar(im)
-    #         plt.ylabel('Actual')
-    #         plt.xlabel('Prediction')
-    #         plt.xticks(np.arange(0, 10, 1))
-    #         plt.yticks(np.arange(0, 10, 1))
-    #         ax.set_ylim(10-0.5, -0.5)
-    #         print("\nDisplaying confusion matrix...\n")
-    #         plt.savefig(self.cwd+'/cm_mat_'+self.desc+'.jpg')
-    #         if(show):    
-    #             plt.show()
-    #         plt.close()
-            
-    #         return (good/self.test_dim)
-    #     else:
-    #         print('\nTest on the network first!')
-    #         return 0
