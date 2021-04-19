@@ -22,13 +22,13 @@ def note(*text):
         print(t, end=' ')
     print()
 
-debug = True
+debug_bool = False
 
 def debug(*text):
     try: 
-        debug
+        debug_bool
 
-        if(debug):
+        if(debug_bool):
             print('## DEBUG:', end=' ')
             for t in text:
                 print(t, end=' ')

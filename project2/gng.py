@@ -53,8 +53,6 @@ from utils import *
 #                 nodes.append(edge.nodes[1])
         
 #         return nodes
-    
-
 
 
 class GNG:
@@ -73,7 +71,8 @@ class GNG:
                 age_max=50, 
                 gamma=5,
                 error_alpha=.1,
-                error_d=.9):
+                error_d=.9,
+                error_target=False):
         # Edges and Edge Age
         self.edges      = np.zeros((2,2))
         self.edges_age  = np.zeros((2,2))
@@ -93,6 +92,8 @@ class GNG:
         w_a, w_b = furthest_points[0], furthest_points[1]
         self.neurons = np.append([w_a], [w_b], axis=0)
         self.edges[0][1] = 1
+
+        epoch_error = []
 
         debug('GNG Loop')
         for e in tqdm(range(epochs)):
@@ -166,7 +167,7 @@ class GNG:
 
             #############################################
             # 7. remove old edges & unconnected neurons
-            debug('7. remove old edges')
+            debug('7. remove old edges and neurons')
             for i in range(len(self.edges_age)):
                 for j,age in enumerate(self.edges_age[i]):
                     if(age > age_max):
@@ -174,7 +175,25 @@ class GNG:
                         self.edges_age[i][j] = 0
 
             # remove unconnected neurons
-    
+            is_connected = [0] * len(self.neurons)
+            for i in range(len(self.neurons)):
+                for j,conn in enumerate(self.edges[i]):
+                    if(conn == 1):
+                        is_connected[i] = 1
+                        is_connected[j] = 1
+ 
+            new_len = np.sum(is_connected)
+            if(new_len != len(is_connected)):
+                # iterate backwards to retain indices
+                for i,conn in reversed(list(enumerate(is_connected))):
+                    if(conn == 0):
+                        self.neurons   = np.delete(self.neurons,   i, axis=0)
+                        self.edges     = np.delete(self.edges,     i, axis=0)
+                        self.edges     = np.delete(self.edges,     i, axis=1)
+                        self.edges_age = np.delete(self.edges_age, i, axis=0)
+                        self.edges_age = np.delete(self.edges_age, i, axis=1)
+
+
 
             #############################################
             # 8. Insert new neuron
@@ -215,9 +234,12 @@ class GNG:
                 # Fix edges
                 self.edges[w_Q_i][w_f_i] = 0
                 self.edges_age[w_Q_i][w_f_i] = 0
+                self.edges[w_f_i][w_Q_i] = 0
+                self.edges_age[w_f_i][w_Q_i] = 0
 
                 self.edges[w_Q_i][-1] = 1
                 self.edges[-1][w_f_i] = 1
+
             
 
             #############################################
@@ -242,3 +264,13 @@ class GNG:
 
             plt.savefig('./output/'+str(e).zfill(4)+'.jpg')
             plt.close()
+
+            # Save epoch error
+            epoch_error.append(np.max(self.error))
+
+            # Get out if error target is specified and met
+            if(error_target and np.max(self.error) < error_target):
+                print('Error target met!')
+                break
+
+        return self.neurons, epoch_error
