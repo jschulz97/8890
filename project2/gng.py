@@ -254,16 +254,20 @@ class GNG:
             debug()
             debug('Attemping to plot...')
 
-            fig, ax = plt.subplots()
-            ax.scatter(train_data[:,0], train_data[:,1])
-            ax.scatter(self.neurons[:,0], self.neurons[:,1], color='orange')
-            for i,_ in enumerate(self.edges):
-                for j,edge in enumerate(self.edges[i]):
-                    if(edge == 1):
-                        ax.plot(self.neurons[[i,j],0], self.neurons[[i,j], 1], color='orange')
+            try:
+                fig, ax = plt.subplots()
+                ax.scatter(train_data[:,0], train_data[:,1])
+                ax.scatter(self.neurons[:,0], self.neurons[:,1], color='orange')
+                for i,_ in enumerate(self.edges):
+                    for j,edge in enumerate(self.edges[i]):
+                        if(edge == 1):
+                            ax.plot(self.neurons[[i,j],0], self.neurons[[i,j], 1], color='orange')
 
-            plt.savefig('./output/'+str(e).zfill(4)+'.jpg')
-            plt.close()
+                plt.savefig('./output/'+str(e).zfill(4)+'.jpg')
+                plt.close()
+            except:
+                debug('Could not plot.')
+                plt.close()
 
             # Save epoch error
             epoch_error.append(np.max(self.error))
