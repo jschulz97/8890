@@ -201,7 +201,48 @@ class GNF:
 
             #############################################
             # 8. Recompute spanning tree with Kruskal Algorithm
+            
+            # Use age as edge weight
+            # Sort edges by edge age (new to old)
 
+            # build edges list
+            edge_list = []
+            for i,vert in enumerate(self.edges):
+                for j,pair in enumerate(vert):
+                    if(pair == 1):
+                        edge_list.append(np.array([i, j, self.edges_age[i][j]]))
+
+            # sort by weight (age)
+            edges_sorted_i = np.argsort(edge_list)
+
+            # check
+            for edge_i in edges_sorted_i:
+                print(edge_list[edge_i])
+
+            # Keep lowest-weight edges that don't result in cycles
+            new_edges = np.zeros((len(self.neurons), len(self.neurons)))
+            new_edges_age = np.zeros((len(self.neurons), len(self.neurons)))
+
+            # union-find
+            parents = [-1] * len(self.neurons)
+
+            # A utility function to find the subset of an element i
+            def find_parent(parent, i):
+                if parent[i] == -1:
+                    return i
+                if parent[i]!= -1:
+                    return find_parent(parent,parent[i])
+    
+            # Iterate through all edges of graph, find subset of both
+            # vertices of every edge, if both subsets are same, then
+            # there is cycle in graph.
+            for i in self.graph:
+                for j in self.graph[i]:
+                    x = find_parent(parents, i)
+                    y = find_parent(parents, j)
+                    if x == y:
+                        return True
+                    self.union(parents,x,y)
             
 
             #############################################
