@@ -213,9 +213,10 @@ class GNF:
                         edge_list.append(np.array([i, j, self.edges_age[i][j]]))
 
             # sort by weight (age)
-            edges_sorted_i = np.argsort(edge_list)
+            edges_sorted_i = np.argsort(np.array(edge_list)[:,2])
 
             # check
+            debug('Sorted edges:')
             for edge_i in edges_sorted_i:
                 print(edge_list[edge_i])
 
@@ -236,14 +237,15 @@ class GNF:
             # Iterate through all edges of graph, find subset of both
             # vertices of every edge, if both subsets are same, then
             # there is cycle in graph.
-            for i in self.graph:
-                for j in self.graph[i]:
-                    x = find_parent(parents, i)
-                    y = find_parent(parents, j)
-                    if x == y:
-                        return True
-                    self.union(parents,x,y)
-            
+            cyclical = False
+            for edge in edge_list:
+                x = find_parent(parents, edge[0])
+                y = find_parent(parents, edge[1])
+                if x == y:
+                    cyclical = True
+                    break
+                parents[x] = y
+
 
             #############################################
             # 9. Decrease error
