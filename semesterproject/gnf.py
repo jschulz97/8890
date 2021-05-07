@@ -1,9 +1,13 @@
 import numpy as np
 from tqdm import tqdm
 from matplotlib import pyplot as plt
+import copy
 
 from utils import *
+import mst_graph
 
+from importlib import reload
+reload(mst_graph) 
 
 class GNF:
     def __init__(self, ):
@@ -212,39 +216,34 @@ class GNF:
                     if(pair == 1):
                         edge_list.append(np.array([i, j, self.edges_age[i][j]]))
 
-            # sort by weight (age)
-            edges_sorted_i = np.argsort(np.array(edge_list)[:,2])
+            # print('edge list length before mst:', len(edge_list))
 
-            # check
-            debug('Sorted edges:')
-            for edge_i in edges_sorted_i:
-                print(edge_list[edge_i])
+            # # sort by weight (age)
+            # edges_sorted_i = np.argsort(np.array(edge_list)[:,2])
 
-            # Keep lowest-weight edges that don't result in cycles
             new_edges = np.zeros((len(self.neurons), len(self.neurons)))
             new_edges_age = np.zeros((len(self.neurons), len(self.neurons)))
 
-            # union-find
-            parents = [-1] * len(self.neurons)
+            # Kruskal's MST
+            # Keep lowest-weight edges that don't result in cycles
+            graph_mst = mst_graph.Graph(len(self.neurons))
+            for i,vert in enumerate(self.edges):
+                for j,pair in enumerate(vert):
+                    if(pair == 1):
+                        graph_mst.addEdge(i, j, self.edges_age[i][j])
+            new_graph, minCost_mst = graph_mst.KruskalMST()
 
-            # A utility function to find the subset of an element i
-            def find_parent(parent, i):
-                if parent[i] == -1:
-                    return i
-                if parent[i]!= -1:
-                    return find_parent(parent,parent[i])
-    
-            # Iterate through all edges of graph, find subset of both
-            # vertices of every edge, if both subsets are same, then
-            # there is cycle in graph.
-            cyclical = False
-            for edge in edge_list:
-                x = find_parent(parents, edge[0])
-                y = find_parent(parents, edge[1])
-                if x == y:
-                    cyclical = True
-                    break
-                parents[x] = y
+            # print('edge list after mst:',len(new_graph))
+
+            # transfer back to our format
+            for x, y, age in new_graph:
+                new_edges[x][y] = 1
+                new_edges[y][x] = 1
+                new_edges_age[x][y] = age
+                new_edges_age[y][x] = age
+
+            self.edges = copy.deepcopy(new_edges)
+            self.edges_age = copy.deepcopy(new_edges_age)
 
 
             #############################################
@@ -270,8 +269,8 @@ class GNF:
 
                 plt.savefig('./output/'+str(e).zfill(4)+'.jpg')
                 plt.close()
-            except:
-                debug('Could not plot.')
+            except Exception as e:
+                debug('Could not plot.', e)
                 plt.close()
 
             # Save epoch error

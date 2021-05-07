@@ -34,13 +34,13 @@ class Graph:
         else:
             parent[yroot] = xroot
             rank[xroot] += 1
- 
+
     # The main function to construct MST using Kruskal's
         # algorithm
     def KruskalMST(self):
  
         result = []  # This will store the resultant MST
-         
+        
         # An index variable, used for sorted edges
         i = 0
          
@@ -53,7 +53,7 @@ class Graph:
         # given graph, we can create a copy of graph
         self.graph = sorted(self.graph,
                             key=lambda item: item[2])
- 
+
         parent = []
         rank = []
  
@@ -61,7 +61,7 @@ class Graph:
         for node in range(self.V):
             parent.append(node)
             rank.append(0)
- 
+
         # Number of edges to be taken is equal to V-1
         while e < self.V - 1:
  
@@ -83,8 +83,9 @@ class Graph:
             # Else discard the edge
  
         minimumCost = 0
-        print ("Edges in the constructed MST")
+        #print ("Edges in the constructed MST")
         for u, v, weight in result:
             minimumCost += weight
-            print("%d -- %d == %d" % (u, v, weight))
-        print("Minimum Spanning Tree" , minimumCost)
+            #print("%d -- %d == %d" % (u, v, weight))
+        #print("Minimum Spanning Tree" , minimumCost)
+        return result, minimumCost
