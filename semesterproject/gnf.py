@@ -2,6 +2,7 @@ import numpy as np
 from tqdm import tqdm
 from matplotlib import pyplot as plt
 import copy
+import random
 
 from utils import *
 import mst_graph
@@ -26,7 +27,8 @@ class GNF:
                 gamma=5,
                 error_alpha=.1,
                 error_d=.9,
-                error_target=False):
+                error_target=False,
+                random_init=False):
         # Edges and Edge Age
         self.edges      = np.zeros((2,2))
         self.edges_age  = np.zeros((2,2))
@@ -34,16 +36,22 @@ class GNF:
 
         debug('1. pick two neurons')
         # 1. pick two neurons, farthest apart
-        max_dist = 0
-        furthest_points = ()
-        for x1 in tqdm(train_data):
-            for x2 in train_data:
-                dist = np.abs(np.linalg.norm(x1-x2))
-                if(dist > max_dist):
-                    max_dist = dist
-                    furthest_points = (x1, x2)
+        if(not random_init):
+            max_dist = 0
+            furthest_points = ()
+            for x1 in tqdm(train_data):
+                for x2 in train_data:
+                    dist = np.abs(np.linalg.norm(x1-x2))
+                    if(dist > max_dist):
+                        max_dist = dist
+                        furthest_points = (x1, x2)
+            w_a, w_b = furthest_points[0], furthest_points[1]
 
-        w_a, w_b = furthest_points[0], furthest_points[1]
+        else:
+            w_a = random.choice(train_data)
+            w_b = random.choice(train_data)
+
+        
         self.neurons = np.append([w_a], [w_b], axis=0)
         self.edges[0][1] = 1
 
